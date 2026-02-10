@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>English Vocabulary Battle RPG</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+        body {
+            background-color: #1a1a2e;
+            color: #fff;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            height: -webkit-fill-available;
+            overflow: hidden;
+        }
+
+        .pixel-font {
+            font-family: 'Press Start 2P', cursive;
+        }
+
+        .shake {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+
+        .flash-red {
+            animation: flash-red 0.3s ease-out;
+        }
+
+        .flash-green {
+            animation: flash-green 0.3s ease-out;
+        }
+
+        @keyframes flash-red {
+            0% { background-color: rgba(255, 0, 0, 0); }
+            50% { background-color: rgba(255, 0, 0, 0.5); }
+            100% { background-color: rgba(255, 0, 0, 0); }
+        }
+
+        @keyframes flash-green {
+            0% { background-color: rgba(34, 197, 94, 0); }
+            50% { background-color: rgba(34, 197, 94, 0.4); }
+            100% { background-color: rgba(34, 197, 94, 0); }
+        }
+
+        .monster-bounce {
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .damage-pop {
+            position: absolute;
+            color: #ff4d4d;
+            font-weight: bold;
+            font-size: 2rem;
+            animation: float-up 0.8s ease-out forwards;
+            pointer-events: none;
+            z-index: 60;
+        }
+
+        .heal-pop {
+            position: absolute;
+            color: #4ade80;
+            font-weight: bold;
+            font-size: 2rem;
+            animation: float-up 0.8s ease-out forwards;
+            pointer-events: none;
+            z-index: 60;
+        }
+
+        @keyframes float-up {
+            0% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-50px); }
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+        }
+
+        .correct-answer-display {
+            color: #fbbf24;
+            animation: pop-in 0.3s ease-out;
+        }
+
+        @keyframes pop-in {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .review-button-pulse {
+            animation: pulse-button 1.5s infinite;
+        }
+
+        @keyframes pulse-button {
+            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container" class="relative w-full max-w-lg h-full sm:h-[95vh] bg-slate-800 sm:rounded-xl shadow-2xl overflow-hidden flex flex-col border-x-4 sm:border-4 border-slate-600">
+        
+        <!-- ヘッダー：ステータスバー -->
+        <div class="p-4 bg-slate-900 flex justify-between items-center border-b-2 border-slate-700 z-50">
+            <div class="flex flex-col">
+                <span class="text-[10px] text-blue-400 font-bold uppercase">PLAYER HP</span>
+                <div class="w-20 sm:w-32 h-3 bg-gray-700 rounded-full overflow-hidden border border-gray-600">
+                    <div id="player-hp-bar" class="h-full bg-green-500 transition-all duration-300" style="width: 100%;"></div>
+                </div>
+                <span id="player-hp-text" class="text-[10px] mt-1 text-white font-mono">100 / 100</span>
+            </div>
+            
+            <div class="text-center flex flex-col">
+                <span id="stage-count" class="text-lg font-bold text-yellow-400 pixel-font">1 / 15</span>
+                <span class="text-[8px] text-yellow-500 font-bold uppercase tracking-widest">STAGE</span>
+            </div>
+
+            <div class="flex flex-col items-end">
+                <span class="text-[10px] text-red-400 font-bold uppercase">ENEMY HP</span>
+                <div class="w-20 sm:w-32 h-3 bg-gray-700 rounded-full overflow-hidden border border-gray-600">
+                    <div id="enemy-hp-bar" class="h-full bg-red-500 transition-all duration-300" style="width: 100%;"></div>
+                </div>
+                <span id="enemy-hp-text" class="text-[10px] mt-1 text-white font-mono">50 / 50</span>
+            </div>
+        </div>
+
+        <!-- バトルフィールド：ビジュアル部分 -->
+        <div class="relative flex-grow bg-gradient-to-b from-indigo-900 to-slate-800 flex flex-col items-center p-4 min-h-[160px]">
+            <div class="absolute bottom-10 w-full h-24 bg-slate-900 opacity-30 skew-y-3"></div>
+            
+            <div id="monster-section" class="flex-grow flex flex-col items-center justify-center">
+                <div id="monster-container" class="relative z-10 flex flex-col items-center monster-bounce transition-transform duration-300">
+                    <div id="monster-sprite" class="text-7xl sm:text-8xl mb-4 filter drop-shadow-2xl">👾</div>
+                    <div id="monster-name" class="bg-black bg-opacity-60 px-4 py-1 rounded-full text-xs sm:text-sm font-bold tracking-widest text-white border border-slate-500 uppercase">SLIME</div>
+                </div>
+            </div>
+
+            <!-- リカバリーボタン（復習） -->
+            <button id="review-trigger-btn" class="hidden absolute top-4 right-4 bg-green-600 hover:bg-green-500 text-white px-3 py-2 rounded-lg font-bold text-xs review-button-pulse transition-all flex flex-col items-center z-50 shadow-lg">
+                <span>RECOVER HP</span>
+                <span class="text-[8px] opacity-80">(REVIEW MISSED)</span>
+            </button>
+
+            <!-- ログメッセージ -->
+            <div id="message-log" class="w-full bg-black bg-opacity-70 p-3 rounded-lg border border-slate-600 text-xs sm:text-sm min-h-[48px] flex items-center justify-center text-center text-indigo-100 z-20">
+                読み込み中...
+            </div>
+        </div>
+
+        <!-- アクションエリア：問題表示と入力 -->
+        <div id="action-area" class="bg-slate-900 px-6 pt-4 pb-12 sm:pb-8 flex flex-col gap-4 border-t-4 border-slate-700">
+            <div id="question-header" class="text-center">
+                <p id="mode-label" class="text-indigo-400 text-[10px] font-bold mb-1 uppercase tracking-widest">MULTIPLE CHOICE</p>
+                <div id="question-content" class="flex flex-col items-center justify-center min-h-[60px]">
+                    <h2 id="question-display" class="text-3xl sm:text-4xl font-bold text-white tracking-wide">Ready?</h2>
+                    <button id="listen-btn" class="hidden mt-2 bg-indigo-600 hover:bg-indigo-500 p-2 rounded-full transition-all shadow-md">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 sm:h-8 sm:w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 4択グリッド -->
+            <div id="options-grid" class="grid grid-cols-2 gap-3 max-h-[180px] overflow-y-auto pr-1"></div>
+
+            <!-- タイピングUI -->
+            <div id="writing-ui" class="hidden flex flex-col gap-3">
+                <div class="relative flex items-center gap-2">
+                    <input type="text" id="writing-input" autocomplete="off" class="flex-grow bg-slate-800 border-2 border-slate-600 rounded-lg p-3 text-center text-xl sm:text-2xl font-bold text-white uppercase placeholder-slate-600" placeholder="TYPE HERE">
+                    <button id="hint-btn" class="bg-amber-600 hover:bg-amber-500 px-3 py-3 rounded-lg font-bold text-white transition-all border-b-4 border-amber-800 text-xs sm:text-sm">
+                        HINT
+                    </button>
+                </div>
+                <button id="submit-btn" class="bg-indigo-600 hover:bg-indigo-500 p-3 rounded-lg font-bold text-white transition-all border-b-4 border-indigo-800">決定 (ENTER)</button>
+            </div>
+        </div>
+
+        <!-- オーバーレイ：ゲームオーバー・クリア -->
+        <div id="overlay-screen" class="hidden absolute inset-0 bg-black bg-opacity-95 z-[100] flex flex-col items-center justify-center p-8 text-center">
+            <h2 id="overlay-title" class="text-3xl sm:text-5xl font-bold mb-4 pixel-font">GAME OVER</h2>
+            <p id="overlay-msg" class="text-lg sm:text-xl mb-8">健闘を祈る！</p>
+            <button onclick="resetGame()" class="bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 px-8 rounded-full text-lg transition-transform active:scale-95 shadow-xl">
+                再挑戦する
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const TOTAL_STAGES = 15;
+        const wordList = [
+            { en: "I", ja: "私は" }, { en: "you", ja: "あなたは" }, { en: "he", ja: "彼は" }, { en: "she", ja: "彼女は" }, { en: "it", ja: "それは" },
+            { en: "we", ja: "私たちは" }, { en: "they", ja: "彼らは" }, { en: "my", ja: "私の" }, { en: "your", ja: "あなたの" }, { en: "his", ja: "彼の" },
+            { en: "her", ja: "彼女の" }, { en: "our", ja: "私たちの" }, { en: "their", ja: "彼らの" }, { en: "am", ja: "～です" }, { en: "is", ja: "～です" },
+            { en: "are", ja: "～です" }, { en: "do", ja: "～する" }, { en: "have", ja: "持っている" }, { en: "go", ja: "行く" }, { en: "come", ja: "来る" },
+            { en: "see", ja: "見る" }, { en: "look", ja: "見る" }, { en: "watch", ja: "見る" }, { en: "eat", ja: "食べる" }, { en: "drink", ja: "飲む" },
+            { en: "read", ja: "読む" }, { en: "write", ja: "書く" }, { en: "speak", ja: "話す" }, { en: "talk", ja: "話す" }, { en: "listen", ja: "聴く" },
+            { en: "run", ja: "走る" }, { en: "walk", ja: "歩く" }, { en: "play", ja: "遊ぶ" }, { en: "sing", ja: "歌う" }, { en: "dance", ja: "踊る" },
+            { en: "study", ja: "勉強する" }, { en: "learn", ja: "学ぶ" }, { en: "teach", ja: "教える" }, { en: "know", ja: "知っている" }, { en: "think", ja: "思う" },
+            { en: "make", ja: "作る" }, { en: "use", ja: "使う" }, { en: "buy", ja: "買う" }, { en: "take", ja: "取る" }, { en: "help", ja: "助ける" },
+            { en: "live", ja: "住む" }, { en: "want", ja: "欲しい" }, { en: "like", ja: "好き" }, { en: "love", ja: "愛する" }, { en: "open", ja: "開ける" },
+            { en: "close", ja: "閉める" }, { en: "apple", ja: "りんご" }, { en: "orange", ja: "オレンジ" }, { en: "banana", ja: "バナナ" }, { en: "school", ja: "学校" },
+            { en: "home", ja: "家" }, { en: "mountain", ja: "山" }, { en: "river", ja: "川" }, { en: "sea", ja: "海" }, { en: "red", ja: "赤" },
+            { en: "blue", ja: "青" }, { en: "green", ja: "緑" }, { en: "yellow", ja: "黄色" }, { en: "black", ja: "黒" }, { en: "white", ja: "白" }
+        ];
+
+        const monsters = [
+            { name: "SLIME", emoji: "👾", hp: 40 },
+            { name: "BAT", emoji: "🦇", hp: 50 },
+            { name: "GHOST", emoji: "👻", hp: 60 },
+            { name: "POISON BUG", emoji: "🐛", hp: 70 },
+            { name: "MUSHROOM", emoji: "🍄", hp: 80 },
+            { name: "SKELETON", emoji: "💀", hp: 100 },
+            { name: "ZOMBIE", emoji: "🧟", hp: 120 },
+            { name: "WEREWOLF", emoji: "🐺", hp: 140 },
+            { name: "CYCLOPS", emoji: "👁️", hp: 160 },
+            { name: "GOLEM", emoji: "🗿", hp: 180 },
+            { name: "DEMON", emoji: "😈", hp: 200 },
+            { name: "CERBERUS", emoji: "🐕", hp: 250 },
+            { name: "GRIFFIN", emoji: "🦅", hp: 300 },
+            { name: "DRAGON", emoji: "🐲", hp: 400 },
+            { name: "DEMON KING", emoji: "👹", hp: 600 }
+        ];
+
+        let gameState = {
+            playerHp: 100,
+            maxPlayerHp: 100,
+            enemyHp: 0,
+            maxEnemyHp: 0,
+            stage: 1,
+            currentMonster: null,
+            currentWord: null,
+            currentMode: 'choice', 
+            isReviewing: false,
+            isProcessing: false,
+            missedWords: []
+        };
+
+        const playerHpBar = document.getElementById('player-hp-bar');
+        const playerHpText = document.getElementById('player-hp-text');
+        const enemyHpBar = document.getElementById('enemy-hp-bar');
+        const enemyHpText = document.getElementById('enemy-hp-text');
+        const stageText = document.getElementById('stage-count');
+        const monsterSprite = document.getElementById('monster-sprite');
+        const monsterNameText = document.getElementById('monster-name');
+        const messageLog = document.getElementById('message-log');
+        const questionDisplay = document.getElementById('question-display');
+        const modeLabel = document.getElementById('mode-label');
+        const optionsGrid = document.getElementById('options-grid');
+        const writingUI = document.getElementById('writing-ui');
+        const writingInput = document.getElementById('writing-input');
+        const submitBtn = document.getElementById('submit-btn');
+        const hintBtn = document.getElementById('hint-btn');
+        const listenBtn = document.getElementById('listen-btn');
+        const reviewTriggerBtn = document.getElementById('review-trigger-btn');
+        const overlayScreen = document.getElementById('overlay-screen');
+
+        function initStage() {
+            if (gameState.stage > TOTAL_STAGES) {
+                gameClear();
+                return;
+            }
+            const baseMonster = monsters[gameState.stage - 1];
+            gameState.currentMonster = { ...baseMonster };
+            gameState.enemyHp = gameState.currentMonster.hp;
+            gameState.maxEnemyHp = gameState.currentMonster.hp;
+            monsterSprite.innerText = gameState.currentMonster.emoji;
+            monsterNameText.innerText = gameState.currentMonster.name;
+            stageText.innerText = `${gameState.stage} / ${TOTAL_STAGES}`;
+            updateStatusUI();
+            nextQuestion();
+            showMessage(`${gameState.currentMonster.name}が現れた！`);
+        }
+
+        function updateStatusUI() {
+            const playerPrc = (gameState.playerHp / gameState.maxPlayerHp) * 100;
+            playerHpBar.style.width = `${playerPrc}%`;
+            playerHpText.innerText = `${gameState.playerHp} / ${gameState.maxPlayerHp}`;
+            playerHpBar.className = `h-full transition-all duration-300 ${playerPrc < 30 ? 'bg-red-500' : 'bg-green-500'}`;
+
+            const enemyPrc = (gameState.enemyHp / gameState.maxEnemyHp) * 100;
+            enemyHpBar.style.width = `${enemyPrc}%`;
+            enemyHpText.innerText = `${gameState.enemyHp} / ${gameState.maxEnemyHp}`;
+
+            if (gameState.missedWords.length > 0 && !gameState.isReviewing && gameState.playerHp < gameState.maxPlayerHp) {
+                reviewTriggerBtn.classList.remove('hidden');
+            } else {
+                reviewTriggerBtn.classList.add('hidden');
+            }
+        }
+
+        function showMessage(msg) {
+            messageLog.innerText = msg;
+        }
+
+        function playSound(text) {
+            const uttr = new SpeechSynthesisUtterance(text);
+            uttr.lang = 'en-US';
+            uttr.rate = 0.9;
+            speechSynthesis.speak(uttr);
+        }
+
+        function nextQuestion() {
+            gameState.isProcessing = false;
+            
+            // 出題モードをランダムに決定
+            const modes = ['choice', 'listening', 'writing'];
+            gameState.currentMode = modes[Math.floor(Math.random() * modes.length)];
+            
+            let targetWord;
+            if (gameState.isReviewing && gameState.missedWords.length > 0) {
+                targetWord = gameState.missedWords[0];
+            } else {
+                gameState.isReviewing = false; 
+                targetWord = wordList[Math.floor(Math.random() * wordList.length)];
+            }
+            
+            setupQuestionUI(targetWord);
+        }
+
+        function startReview() {
+            if (gameState.isProcessing || gameState.missedWords.length === 0) return;
+            gameState.isReviewing = true;
+            nextQuestion();
+            showMessage("リカバリーモード：復習に正解してHPを回復しよう！");
+            updateStatusUI();
+        }
+
+        function setupQuestionUI(word) {
+            gameState.currentWord = word;
+            
+            optionsGrid.innerHTML = '';
+            optionsGrid.classList.add('hidden');
+            writingUI.classList.add('hidden');
+            listenBtn.classList.add('hidden');
+            questionDisplay.classList.remove('hidden', 'text-yellow-400', 'correct-answer-display');
+            writingInput.value = '';
+            writingInput.placeholder = "TYPE HERE";
+
+            if (gameState.isReviewing) {
+                modeLabel.innerText = `⭐ RECOVER: ${gameState.currentMode.toUpperCase()} ⭐`;
+                modeLabel.className = "text-green-400 text-[10px] font-bold mb-1 uppercase tracking-widest";
+            } else {
+                modeLabel.innerText = `${gameState.currentMode.toUpperCase()}`;
+                modeLabel.className = "text-indigo-400 text-[10px] font-bold mb-1 uppercase tracking-widest";
+            }
+
+            if (gameState.currentMode === 'choice') {
+                questionDisplay.innerText = word.en;
+                showChoices(word, false);
+            } else if (gameState.currentMode === 'listening') {
+                questionDisplay.innerText = "???";
+                listenBtn.classList.remove('hidden');
+                playSound(word.en);
+                showChoices(word, true);
+            } else if (gameState.currentMode === 'writing') {
+                questionDisplay.innerText = word.ja;
+                writingUI.classList.remove('hidden');
+                writingInput.focus();
+            }
+        }
+
+        function showChoices(correctWord, isEnglishOptions) {
+            optionsGrid.classList.remove('hidden');
+            let options = [];
+            const correctValue = isEnglishOptions ? correctWord.en : correctWord.ja;
+            options.push(correctValue);
+
+            while (options.length < 4) {
+                const randomWord = wordList[Math.floor(Math.random() * wordList.length)];
+                const randomValue = isEnglishOptions ? randomWord.en : randomWord.ja;
+                if (!options.includes(randomValue)) options.push(randomValue);
+            }
+            options.sort(() => Math.random() - 0.5);
+
+            options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "option-btn bg-slate-700 hover:bg-indigo-600 p-4 rounded-lg font-bold transition-all border-b-4 border-slate-800 active:border-b-0 active:translate-y-1 text-white text-sm truncate shadow-sm";
+                btn.innerText = opt;
+                btn.onclick = () => handleAnswer(opt);
+                optionsGrid.appendChild(btn);
+            });
+        }
+
+        function giveHint() {
+            if (gameState.currentMode !== 'writing') return;
+            const firstChar = gameState.currentWord.en.charAt(0).toUpperCase();
+            writingInput.placeholder = `START WITH "${firstChar}..."`;
+            showMessage(`ヒント：最初の文字は "${firstChar}" です`);
+            writingInput.focus();
+        }
+
+        function handleAnswer(selected) {
+            if (gameState.isProcessing) return;
+            gameState.isProcessing = true;
+
+            let isCorrect = false;
+            const userInput = selected.toLowerCase().trim();
+            const correctEn = gameState.currentWord.en.toLowerCase().trim();
+
+            if (gameState.currentMode === 'listening' || gameState.currentMode === 'writing') {
+                isCorrect = userInput === correctEn;
+            } else {
+                isCorrect = selected === gameState.currentWord.ja;
+            }
+
+            if (!isCorrect || gameState.currentMode === 'listening') {
+                questionDisplay.innerText = gameState.currentWord.en;
+                questionDisplay.classList.add('correct-answer-display');
+            }
+
+            if (isCorrect) {
+                if (gameState.isReviewing) {
+                    recoverPlayer();
+                } else {
+                    attackEnemy();
+                }
+            } else {
+                if (!gameState.missedWords.find(w => w.en === gameState.currentWord.en)) {
+                    gameState.missedWords.push(gameState.currentWord);
+                }
+                attackPlayer();
+            }
+        }
+
+        function attackEnemy() {
+            const damage = 25 + Math.floor(Math.random() * 15);
+            gameState.enemyHp = Math.max(0, gameState.enemyHp - damage);
+            createEffectText(document.getElementById('monster-container'), `-${damage}`, 'damage-pop');
+            monsterSprite.classList.add('shake');
+            setTimeout(() => monsterSprite.classList.remove('shake'), 500);
+            
+            showMessage(`正解！ ${gameState.currentWord.en} = ${gameState.currentWord.ja}`);
+            updateStatusUI();
+            
+            const delay = 1200;
+            if (gameState.enemyHp <= 0) setTimeout(winStage, delay);
+            else setTimeout(nextQuestion, delay);
+        }
+
+        function recoverPlayer() {
+            const heal = 20;
+            gameState.playerHp = Math.min(gameState.maxPlayerHp, gameState.playerHp + heal);
+            gameState.missedWords = gameState.missedWords.filter(w => w.en !== gameState.currentWord.en);
+            
+            document.getElementById('game-container').classList.add('flash-green');
+            setTimeout(() => document.getElementById('game-container').classList.remove('flash-green'), 300);
+            
+            createEffectText(document.getElementById('monster-container'), `+${heal} HP`, 'heal-pop');
+            showMessage(`復習成功！ HPを ${heal} 回復しました。`);
+            updateStatusUI();
+            
+            setTimeout(() => {
+                if (gameState.missedWords.length === 0) {
+                    gameState.isReviewing = false;
+                }
+                nextQuestion();
+            }, 1500);
+        }
+
+        function attackPlayer() {
+            const damage = 15 + (gameState.stage * 2) + Math.floor(Math.random() * 5);
+            gameState.playerHp = Math.max(0, gameState.playerHp - damage);
+            document.getElementById('game-container').classList.add('flash-red');
+            setTimeout(() => document.getElementById('game-container').classList.remove('flash-red'), 300);
+            
+            showMessage(`ミス！ 正解は "${gameState.currentWord.en}" でした`);
+            updateStatusUI();
+            
+            const delay = 2000;
+            if (gameState.playerHp <= 0) setTimeout(gameOver, 800);
+            else {
+                gameState.isReviewing = false;
+                setTimeout(nextQuestion, delay);
+            }
+        }
+
+        function createEffectText(parent, text, className) {
+            const el = document.createElement('div');
+            el.className = `${className} pixel-font`;
+            el.innerText = text;
+            el.style.left = '50%';
+            el.style.top = '0';
+            parent.appendChild(el);
+            setTimeout(() => el.remove(), 800);
+        }
+
+        function winStage() {
+            showMessage(`${gameState.currentMonster.name}を倒した！`);
+            gameState.stage++;
+            const bonusHeal = 10;
+            gameState.playerHp = Math.min(gameState.maxPlayerHp, gameState.playerHp + bonusHeal);
+            setTimeout(initStage, 1200);
+        }
+
+        function gameOver() {
+            const title = document.getElementById('overlay-title');
+            title.innerText = "GAME OVER";
+            title.className = "text-3xl sm:text-5xl font-bold mb-4 text-red-500 pixel-font";
+            document.getElementById('overlay-msg').innerText = `ステージ ${gameState.stage} で敗北しました。`;
+            overlayScreen.classList.remove('hidden');
+        }
+
+        function gameClear() {
+            const title = document.getElementById('overlay-title');
+            title.innerText = "ALL CLEAR!";
+            title.className = "text-3xl sm:text-5xl font-bold mb-4 text-yellow-400 pixel-font";
+            document.getElementById('overlay-msg').innerText = `全${TOTAL_STAGES}ステージを完全制覇しました！`;
+            overlayScreen.classList.remove('hidden');
+        }
+
+        function resetGame() {
+            gameState.playerHp = 100;
+            gameState.stage = 1;
+            gameState.missedWords = [];
+            gameState.isReviewing = false;
+            overlayScreen.classList.add('hidden');
+            initStage();
+        }
+
+        listenBtn.onclick = (e) => {
+            e.stopPropagation();
+            playSound(gameState.currentWord.en);
+        };
+        hintBtn.onclick = giveHint;
+        reviewTriggerBtn.onclick = startReview;
+        submitBtn.onclick = () => handleAnswer(writingInput.value);
+        writingInput.onkeydown = (e) => {
+            if (e.key === 'Enter') handleAnswer(writingInput.value);
+        };
+
+        window.onload = initStage;
+    </script>
+</body>
+</html>
