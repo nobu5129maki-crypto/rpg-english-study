@@ -1,0 +1,20 @@
+{
+"short_name": "英単語RPG",
+"name": "中1英単語RPG",
+"icons": [
+{
+"src": "icon.svg",
+"type": "image/svg+xml",
+"sizes": "512x512",
+"purpose": "any maskable"
+}
+],
+"start_url": "./english_battle_game.html",
+"background_color": "#1a1a2e",
+"display": "standalone",
+"scope": "./",
+"theme_color": "#1e1b4b",
+"description": "英単語を解いてモンスターを倒す、学習用バトルRPGです。",
+"orientation": "portrait",
+"lang": "ja"
+}
