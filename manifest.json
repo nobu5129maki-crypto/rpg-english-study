@@ -9,7 +9,7 @@
 "purpose": "any maskable"
 }
 ],
-"start_url": "./english_battle_game.html",
+"start_url": "./index.html",
 "background_color": "#1a1a2e",
 "display": "standalone",
 "scope": "./",
